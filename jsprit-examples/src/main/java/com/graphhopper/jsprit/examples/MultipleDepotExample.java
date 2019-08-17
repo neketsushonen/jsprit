@@ -49,10 +49,12 @@ public class MultipleDepotExample {
         Examples.createOutputFolder();
 
         VehicleRoutingProblem.Builder vrpBuilder = VehicleRoutingProblem.Builder.newInstance();
+
+        
         /*
          * Read cordeau-instance p01, BUT only its services without any vehicles
 		 */
-        new VrpXMLReader(vrpBuilder).read("input/vrp_cordeau_01.xml");
+        new VrpXMLReader(vrpBuilder).read("/Users/chunhaulai/Documents/workspace-vrp/jsprit/jsprit-examples/input/vrp_cordeau_01.xml");
 
 		/*
          * add vehicles with its depots
@@ -100,8 +102,8 @@ public class MultipleDepotExample {
          * solve the problem
 		 */
         VehicleRoutingAlgorithm vra = Jsprit.Builder.newInstance(vrp).setProperty(Jsprit.Parameter.THREADS, "5").buildAlgorithm();
-        vra.getAlgorithmListeners().addListener(new StopWatch(), Priority.HIGH);
-        vra.getAlgorithmListeners().addListener(new AlgorithmSearchProgressChartListener("output/progress.png"));
+       // vra.getAlgorithmListeners().addListener(new StopWatch(), Priority.HIGH);
+        //vra.getAlgorithmListeners().addListener(new AlgorithmSearchProgressChartListener("output/progress.png"));
         Collection<VehicleRoutingProblemSolution> solutions = vra.searchSolutions();
 
         SolutionPrinter.print(Solutions.bestOf(solutions));

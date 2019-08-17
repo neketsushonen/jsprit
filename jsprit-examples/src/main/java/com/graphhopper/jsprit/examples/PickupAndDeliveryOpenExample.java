@@ -51,7 +51,7 @@ public class PickupAndDeliveryOpenExample {
 		/*
          * A solomonReader reads solomon-instance files, and stores the required information in the builder.
 		 */
-        new VrpXMLReader(vrpBuilder).read("input/pickups_and_deliveries_solomon_r101_withoutTWs_open.xml");
+        new VrpXMLReader(vrpBuilder).read("/Users/chunhaulai/Documents/workspace-vrp/jsprit/jsprit-examples/input/pickups_and_deliveries_solomon_r101_withoutTWs_open.xml");
 
 		/*
          * Finally, the problem can be built. By default, transportCosts are crowFlyDistances (as usually used for vrp-instances).

@@ -54,7 +54,7 @@ public class MultipleDepotExample2 {
         /*
          * Read cordeau-instance p01, BUT only its services without any vehicles
 		 */
-        new CordeauReader(vrpBuilder).read("input/p08");
+        new CordeauReader(vrpBuilder).read("/Users/chunhaulai/Documents/workspace-vrp/jsprit/jsprit-examples/input/p08");
 
 		/*
          * add vehicles with its depots

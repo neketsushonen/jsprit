@@ -108,7 +108,7 @@ public class BuildAlgorithmFromScratch {
         Examples.createOutputFolder();
 
         VehicleRoutingProblem.Builder vrpBuilder = VehicleRoutingProblem.Builder.newInstance();
-        new CordeauReader(vrpBuilder).read("input/p08");
+        new CordeauReader(vrpBuilder).read("/Users/chunhaulai/Documents/workspace-vrp/jsprit/jsprit-examples/input/p08");
         final VehicleRoutingProblem vrp = vrpBuilder.build();
 
         VehicleRoutingAlgorithm vra = createAlgorithm(vrp);
