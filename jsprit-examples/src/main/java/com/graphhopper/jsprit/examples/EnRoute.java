@@ -1,19 +1,23 @@
 
 package com.graphhopper.jsprit.examples;
 
-import  com.graphhopper.jsprit.core.problem.solution.route.activity.*;
+import com.graphhopper.jsprit.core.problem.solution.route.activity.*;
 import com.graphhopper.jsprit.analysis.toolbox.GraphStreamViewer;
 import com.graphhopper.jsprit.analysis.toolbox.GraphStreamViewer.Label;
 import com.graphhopper.jsprit.analysis.toolbox.Plotter;
 import com.graphhopper.jsprit.core.algorithm.VehicleRoutingAlgorithm;
 import com.graphhopper.jsprit.core.algorithm.box.Jsprit;
+import com.graphhopper.jsprit.core.algorithm.ruin.listener.RuinListener;
+import com.graphhopper.jsprit.core.algorithm.state.StateId;
 import com.graphhopper.jsprit.core.algorithm.state.StateManager;
 import com.graphhopper.jsprit.core.problem.Location;
 import com.graphhopper.jsprit.core.problem.VehicleRoutingProblem;
 import com.graphhopper.jsprit.core.problem.VehicleRoutingProblem.FleetSize;
 import com.graphhopper.jsprit.core.problem.constraint.ConstraintManager;
 import com.graphhopper.jsprit.core.problem.constraint.ServiceDeliveriesFirstConstraint;
+import com.graphhopper.jsprit.core.problem.constraint.HardActivityConstraint.ConstraintsStatus;
 import com.graphhopper.jsprit.core.problem.job.Delivery;
+import com.graphhopper.jsprit.core.problem.job.Job;
 import com.graphhopper.jsprit.core.problem.job.Pickup;
 import com.graphhopper.jsprit.core.problem.job.Service;
 import com.graphhopper.jsprit.core.problem.job.Shipment;
@@ -26,10 +30,13 @@ import com.graphhopper.jsprit.core.problem.vehicle.VehicleTypeImpl;
 import com.graphhopper.jsprit.core.reporting.SolutionPrinter;
 import com.graphhopper.jsprit.core.util.Coordinate;
 import com.graphhopper.jsprit.core.util.Solutions;
+import com.graphhopper.jsprit.examples.state.PedidoStatusUpdater;
 import com.graphhopper.jsprit.io.problem.VrpXMLWriter;
 import com.graphhopper.jsprit.util.Examples;
 import com.graphhopper.jsprit.util.MetroCosts;
-import com.graphhopper.jsprit.util.SericePickuptFirstConstraing;
+import com.graphhopper.jsprit.util.ServiceCostDeliveryAsociatePickupConstraint;
+import com.graphhopper.jsprit.util.ServiceDeliveryAsociatePickupConstraint;
+import com.graphhopper.jsprit.util.ServicePickupFirstConstrain;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -57,10 +64,11 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 
 
-public class EnRouteSpeedyman {
+public class EnRoute {
+
+    
 
     public static void main(String[] args) throws IOException {
-
         DirectedWeightedMultigraph<Integer, DefaultWeightedEdge> g = new DirectedWeightedMultigraph<Integer, DefaultWeightedEdge>(DefaultWeightedEdge.class);
 		Map<String,Integer> nodeMaps = new HashMap<String,Integer>();
 		Map<Integer, String> estacionmaps = new HashMap<Integer, String>();
@@ -126,6 +134,8 @@ public class EnRouteSpeedyman {
         writer.close();
         final int WEIGHT_INDEX = 0;
         Map<Integer,List<Service>> pedidos = new HashMap<Integer,List<Service>>();
+        Map<Integer,StateId> pedidosEstado = new HashMap<Integer,StateId>();
+
         Map<Integer,Location> locations = new HashMap<Integer,Location>();
         Map<String,Coordinate> estacionCoordenada = new HashMap<String,Coordinate>();
 
@@ -147,6 +157,7 @@ public class EnRouteSpeedyman {
 			fila++;
 		}
          
+
         //pedidos
 		sheet = workbook.getSheetAt(1);
 		fila = 0;
@@ -158,7 +169,8 @@ public class EnRouteSpeedyman {
                 int amount = (int)row.getCell(3).getNumericCellValue();
 				if(nodeMaps.containsKey(estacion)){
 					if(!pedidos.containsKey(orderId)){
-						pedidos.put(orderId,  new ArrayList<Service>());
+                        pedidos.put(orderId,  new ArrayList<Service>());
+                        
 					}
                     //pedidos.get(orderId).add(estacion);
                     
@@ -168,7 +180,7 @@ public class EnRouteSpeedyman {
                     locx.setCoordinate(estacionCoordenada.get(estacion));
                     if(!locations.containsKey(orderId)){
                         locations.put(orderId, locx.build());
-                        Pickup pickup1 = Pickup.Builder.newInstance(String.valueOf(orderId)).addSizeDimension(WEIGHT_INDEX, 1).setLocation(locx.build()).build();
+                        Pickup pickup1 = Pickup.Builder.newInstance(String.valueOf(orderId)).addSizeDimension(WEIGHT_INDEX, amount).setLocation(locx.build()).build();
                         
                         pedidos.get(orderId).add(pickup1);
                         
@@ -208,7 +220,7 @@ public class EnRouteSpeedyman {
 		/*
          * get a vehicle type-builder and build a type with the typeId "vehicleType" and a capacity of 2
 		 */
-        VehicleTypeImpl.Builder vehicleTypeBuilder = VehicleTypeImpl.Builder.newInstance("vehicleType").addCapacityDimension(0,11);
+        VehicleTypeImpl.Builder vehicleTypeBuilder = VehicleTypeImpl.Builder.newInstance("vehicleType").addCapacityDimension(0,13);
         vehicleTypeBuilder.setCostPerDistance(1.0);
         VehicleType vehicleType = vehicleTypeBuilder.build();
 
@@ -223,6 +235,7 @@ public class EnRouteSpeedyman {
          Builder vehicleBuilder1 = VehicleImpl.Builder.newInstance("La Cisterna@[-3,-12]");
         vehicleBuilder1.setStartLocation(Location.Builder.newInstance().setId(String.valueOf(nodeMaps.get("La Cisterna"))).setCoordinate(estacionCoordenada.get("La Cisterna")).build()).setReturnToDepot(false);
         vehicleBuilder1.setType(vehicleType);
+        
         VehicleImpl vehicle1 = vehicleBuilder1.build();
 
         Builder vehicleBuilder2 = VehicleImpl.Builder.newInstance("Pudahuel@[-14,1]");
@@ -245,64 +258,166 @@ public class EnRouteSpeedyman {
         vehicleBuilder5.setType(vehicleType);
         VehicleImpl vehicle5 = vehicleBuilder5.build();
 
-
+        
          
         VehicleRoutingProblem.Builder vrpBuilder = VehicleRoutingProblem.Builder.newInstance();
-        vrpBuilder.addVehicle(vehicle1);//.addVehicle(vehicle2).addVehicle(vehicle3).addVehicle(vehicle4).addVehicle(vehicle5);
+        vrpBuilder.addVehicle(vehicle1).addVehicle(vehicle2).addVehicle(vehicle3).addVehicle(vehicle4).addVehicle(vehicle5);
         vrpBuilder.setRoutingCost(new MetroCosts(g));
 
-        
         for(Map.Entry<Integer, List<Service>> entry:pedidos.entrySet()){
-            for(Service s: entry.getValue()){
-                    vrpBuilder.addJob(s);
-            }
-            break;
-        }
+            if(entry.getKey()==1 || entry.getKey()==19|| entry.getKey()==8) 
+	           	for(Service s: entry.getValue()){
+	                   vrpBuilder.addJob(s);
+	
+	           	}  
+       }
+       
 
-        /*
-        vrpBuilder.addJob(shipment1).addJob(shipment2).addJob(shipment3).addJob(shipment4);
-        vrpBuilder.addJob(shipment5).addJob(shipment6).addJob(shipment7).addJob(shipment8);
-        vrpBuilder.addJob(shipment9).addJob(shipment10).addJob(shipment11).addJob(shipment12);
-        vrpBuilder.addJob(shipment13).addJob(shipment14).addJob(shipment15).addJob(shipment16);
-        */
 
         vrpBuilder.setFleetSize(FleetSize.FINITE);
         VehicleRoutingProblem problem = vrpBuilder.build();
 
 
         StateManager stateManager = new StateManager(problem);
+
+        for(Map.Entry<Integer, List<Service>> entry:pedidos.entrySet()){
+            StateId state = stateManager.createStateId(String.valueOf(entry.getKey()));      
+            pedidosEstado.put(entry.getKey(), stateManager.createStateId(String.valueOf(entry.getKey())));
+           
+                
+        }
+        stateManager.addStateUpdater(new PedidoStatusUpdater(stateManager, pedidosEstado ));
+
         ConstraintManager constraintManager = new ConstraintManager(problem, stateManager);
-        constraintManager.addConstraint(new SericePickuptFirstConstraing(), ConstraintManager.Priority.CRITICAL);
+        constraintManager.addConstraint(new ServicePickupFirstConstrain(stateManager, pedidosEstado,pedidos),  ConstraintManager.Priority.CRITICAL);
+        constraintManager.addConstraint(new ServiceDeliveryAsociatePickupConstraint(stateManager, pedidosEstado));
+       // constraintManager.addConstraint(new ServiceCostDeliveryAsociatePickupConstraint());
 
-        VehicleRoutingAlgorithm algorithm = Jsprit.Builder.newInstance(problem).setStateAndConstraintManager(stateManager,constraintManager).buildAlgorithm();
+        
 
-//		algorithm.setMaxIterations(30000);
+        VehicleRoutingAlgorithm algorithm = Jsprit.Builder.newInstance(problem).setStateAndConstraintManager(stateManager,constraintManager).setProperty(Jsprit.Strategy.WORST_REGRET, "0.")
+                .setProperty(Jsprit.Strategy.WORST_BEST, "0.").buildAlgorithm();
+        
+        algorithm.addListener(new RuinListener() {
+			
+		  
+            @Override
+            public void ruinStarts(Collection<VehicleRoute> routes) {
+
+            }
+
+            @Override
+            public void ruinEnds(Collection<VehicleRoute> routes, Collection<Job> unassignedJobs) {
+                Map<TourActivity, VehicleRoute> toDeleteActRouteMap = new HashMap<>();
+                for(VehicleRoute route : routes){
+                    List<String> orderIds = new ArrayList<String>();
+
+                	for(TourActivity act: route.getActivities()){
+                        if(act instanceof Start || act instanceof End ){
+                            continue;
+                        }else{
+
+                            if(act instanceof PickupService){
+                                Pickup sgg = (Pickup) ((PickupService)act).getJob();
+                                orderIds.add(sgg.getId());
+                            }
+                            
+                            if(act instanceof DeliverService){
+                            	Delivery sgg = (Delivery) ((DeliverService)act).getJob();
+                            	System.out.println(sgg.getId()+":::"+orderIds);
+                            	if(!orderIds.contains(sgg.getId().split("::")[0])) {
+                            		System.out.println("me agregue");
+                            		toDeleteActRouteMap.put(act, route);
+                            	}    
+                            		
+                                
+                            }
+                        
+                        }
+                      }     
+                	
+                   
+                }
+                for (Map.Entry<TourActivity, VehicleRoute> entry : toDeleteActRouteMap.entrySet()) {
+                    TourActivity act = entry.getKey();
+                    VehicleRoute route = entry.getValue();
+                    if (act instanceof TourActivity.JobActivity) {
+                        Job job = ((TourActivity.JobActivity) act).getJob();
+                        boolean removed = route.getTourActivities().removeJob(job);
+                        if(removed) {
+                        	System.out.println("eliminado..."+job.getId());
+                            unassignedJobs.add(job);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void removed(Job job, VehicleRoute vehicleRoute) {
+
+            }
+        });
+        
+        
+        algorithm.setMaxIterations(20);
+		 
         /*
          * and search a solution
 		 */
         Collection<VehicleRoutingProblemSolution> solutions = algorithm.searchSolutions();
 
+        
+        
+        /*
         VehicleRoutingProblemSolution s = Solutions.bestOf(solutions);
         for(VehicleRoute route: s.getRoutes()){
-           for(TourActivity ac: route.getActivities()){
-            if(ac instanceof PickupService){
-                Pickup xs = (Pickup) ((PickupService)ac).getJob();
-                System.out.println(xs.getId()+"->"+estacionmaps.get(Integer.parseInt(xs.getLocation().getId())));
-            }else if(ac instanceof DeliverService){
-  
-                Delivery xs = (Delivery) ((DeliverService)ac).getJob();
-                System.out.println(xs.getId()+"->"+estacionmaps.get(Integer.parseInt(xs.getLocation().getId())));
+                System.out.println(route.getVehicle().getId());
+                List<String> orderIds = new ArrayList<String>();
                
-            }
-           }
+    
+                for(TourActivity ac: route.getTourActivities().getActivities()){
+                    if(ac instanceof PickupService){
+                        Pickup sg = (Pickup) ((PickupService)ac).getJob();
+                        orderIds.add(sg.getId());
+                        System.out.println(sg.getId());
+
+                    }else if(ac instanceof DeliverService){  
+                        
+    
+                        Delivery sg = (Delivery) ((DeliverService)ac).getJob();
+                        System.out.println(sg.getId());
+
+                        boolean found = false;
+                        for(String oid : orderIds){
+                            if(sg.getId().contains(oid+"::")){
+                                found = true;
+                            }
+                            if(oid.equalsIgnoreCase("15") && sg.getId().equalsIgnoreCase("15::54")){
+                                System.out.println(found);
+                            }
+                            if(oid.equalsIgnoreCase("15") && sg.getId().equalsIgnoreCase("4::20")){
+                                System.out.println(found);
+                            }
+                             
+                            if(found) break;
+                        }
+                    }
+                      
+                    
+                }
             
         }
+        */
          
        
 
 		/*
 		 * print nRoutes and totalCosts of bestSolution
 		 */
+        for (VehicleRoutingProblemSolution s : solutions) {
+        	System.out.println("==============");
+        	SolutionPrinter.print(problem, s, SolutionPrinter.Print.VERBOSE);
+        }
         //SolutionPrinter.print(problem, Solutions.bestOf(solutions), SolutionPrinter.Print.VERBOSE);
        // new GraphStreamViewer(problem, Solutions.bestOf(solutions)).setRenderDelay(100).display();
     }

@@ -42,6 +42,11 @@ public class ManhattanCosts extends AbstractForwardVehicleRoutingTransportCosts 
 
     }
 
+    public ManhattanCosts(double speed) {
+        this.speed = speed;
+    }
+
+
     @Override
     public double getTransportCost(Location from, Location to, double time, Driver driver, Vehicle vehicle) {
         double distance;

@@ -52,7 +52,7 @@ import com.graphhopper.jsprit.core.reporting.SolutionPrinter;
 import com.graphhopper.jsprit.core.util.Coordinate;
 import com.graphhopper.jsprit.core.util.CrowFlyCosts;
 import com.graphhopper.jsprit.core.util.Solutions;
-import com.graphhopper.jsprit.util.Examples;
+import com.graphhopper.jsprit.examples.*;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -232,7 +232,13 @@ public class BicycleMessenger {
      * @throws IOException
      */
     public static void main(String[] args) throws IOException {
-        Examples.createOutputFolder();
+        File dir = new File("output");
+        // if the directory does not exist, create it
+        if (!dir.exists()) {
+            System.out.println("creating directory ./output");
+            boolean result = dir.mkdir();
+            if (result) System.out.println("./output created");
+        }
 
 		/*
         build the problem
@@ -356,7 +362,7 @@ public class BicycleMessenger {
     }
 
     private static void readEnvelopes(Builder problemBuilder) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(new File("input/bicycle_messenger_demand.txt")));
+        BufferedReader reader = new BufferedReader(new FileReader(new File("/Users/chunhaulai/Documents/workspace-vrp/jsprit/jsprit-examples/input/bicycle_messenger_demand.txt")));
         String line;
         boolean firstLine = true;
         while ((line = reader.readLine()) != null) {
@@ -375,7 +381,7 @@ public class BicycleMessenger {
     }
 
     private static void readMessengers(Builder problemBuilder) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(new File("input/bicycle_messenger_supply.txt")));
+        BufferedReader reader = new BufferedReader(new FileReader(new File("/Users/chunhaulai/Documents/workspace-vrp/jsprit/jsprit-examples/input/bicycle_messenger_supply.txt")));
         String line;
         boolean firstLine = true;
         VehicleType messengerType = VehicleTypeImpl.Builder.newInstance("messengerType").addCapacityDimension(0, 15).setCostPerDistance(1).build();

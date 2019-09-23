@@ -80,6 +80,8 @@ public class JobAndActivityDependenciesExample {
         public void visit(TourActivity activity) {
             if (((TourActivity.JobActivity) activity).getJob().getName().equals("use key")) {
                 stateManager.putProblemState(keyUsedStateId, VehicleRoute.class, route);
+               // System.out.println(stateManager.hashCode() + " use key " + route.hashCode());
+          
             } else if (((TourActivity.JobActivity) activity).getJob().getName().equals("get key")) {
                 stateManager.putProblemState(keyPickedStateId, VehicleRoute.class, route);
             } else if (((TourActivity.JobActivity) activity).getJob().getName().equals("deliver key")) {
@@ -266,7 +268,7 @@ public class JobAndActivityDependenciesExample {
         constraintManager.addConstraint(new GetUseAndDeliverHardRouteContraint(stateManager, keyPicked, keyUsed, keyDelivered));
 
         VehicleRoutingAlgorithm vra = Jsprit.Builder.newInstance(vrp).setStateAndConstraintManager(stateManager,constraintManager).buildAlgorithm();
-        vra.setMaxIterations(100);
+        vra.setMaxIterations(5);
 
         Collection<VehicleRoutingProblemSolution> solutions = vra.searchSolutions();
 

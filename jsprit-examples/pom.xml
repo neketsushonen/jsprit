@@ -74,6 +74,25 @@
 			<artifactId>jgrapht-core</artifactId>
 			<version>1.3.0</version>
 		</dependency>
+
+        <dependency>
+			<groupId>cl</groupId>
+			<artifactId>adevcom-java-routing</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
+        
+		<dependency>
+			<groupId>cl</groupId>
+			<artifactId>adevcom-java-vo</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
+
+        <dependency>
+			<groupId>postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>8.4-702.jdbc4</version>
+		</dependency>
+
     </dependencies>
 
 </project>
