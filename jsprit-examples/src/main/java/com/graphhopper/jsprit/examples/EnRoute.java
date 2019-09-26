@@ -7,9 +7,11 @@ import com.graphhopper.jsprit.analysis.toolbox.GraphStreamViewer.Label;
 import com.graphhopper.jsprit.analysis.toolbox.Plotter;
 import com.graphhopper.jsprit.core.algorithm.VehicleRoutingAlgorithm;
 import com.graphhopper.jsprit.core.algorithm.box.Jsprit;
+import com.graphhopper.jsprit.core.algorithm.recreate.listener.InsertionStartsListener;
 import com.graphhopper.jsprit.core.algorithm.ruin.listener.RuinListener;
 import com.graphhopper.jsprit.core.algorithm.state.StateId;
 import com.graphhopper.jsprit.core.algorithm.state.StateManager;
+import com.graphhopper.jsprit.core.algorithm.termination.IterationWithoutImprovementTermination;
 import com.graphhopper.jsprit.core.problem.Location;
 import com.graphhopper.jsprit.core.problem.VehicleRoutingProblem;
 import com.graphhopper.jsprit.core.problem.VehicleRoutingProblem.FleetSize;
@@ -35,8 +37,9 @@ import com.graphhopper.jsprit.io.problem.VrpXMLWriter;
 import com.graphhopper.jsprit.util.Examples;
 import com.graphhopper.jsprit.util.MetroCosts;
 import com.graphhopper.jsprit.util.ServiceCostDeliveryAsociatePickupConstraint;
+import com.graphhopper.jsprit.util.ServiceDeliveryAllowedConstraint;
 import com.graphhopper.jsprit.util.ServiceDeliveryAsociatePickupConstraint;
-import com.graphhopper.jsprit.util.ServicePickupFirstConstrain;
+import com.graphhopper.jsprit.util.ServicePickupFirstConstraint;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -265,7 +268,8 @@ public class EnRoute {
         vrpBuilder.setRoutingCost(new MetroCosts(g));
 
         for(Map.Entry<Integer, List<Service>> entry:pedidos.entrySet()){
-            if(entry.getKey()==1 || entry.getKey()==19|| entry.getKey()==8) 
+           // if(entry.getKey()==1 || entry.getKey()==19|| entry.getKey()==8|| entry.getKey()==6) 
+            //if(entry.getKey()==1 || entry.getKey()==19|| entry.getKey()==8|| entry.getKey()==6)
 	           	for(Service s: entry.getValue()){
 	                   vrpBuilder.addJob(s);
 	
@@ -289,26 +293,26 @@ public class EnRoute {
         stateManager.addStateUpdater(new PedidoStatusUpdater(stateManager, pedidosEstado ));
 
         ConstraintManager constraintManager = new ConstraintManager(problem, stateManager);
-        constraintManager.addConstraint(new ServicePickupFirstConstrain(stateManager, pedidosEstado,pedidos),  ConstraintManager.Priority.CRITICAL);
-        constraintManager.addConstraint(new ServiceDeliveryAsociatePickupConstraint(stateManager, pedidosEstado));
+        constraintManager.addLoadConstraint();
+
+        constraintManager.addConstraint(new ServicePickupFirstConstraint(stateManager, pedidosEstado,pedidos),  ConstraintManager.Priority.CRITICAL);
+        constraintManager.addConstraint(new ServiceDeliveryAllowedConstraint(stateManager, pedidosEstado,pedidos),  ConstraintManager.Priority.CRITICAL);
+        //constraintManager.addConstraint(new ServiceDeliveryAsociatePickupConstraint(stateManager, pedidosEstado));
        // constraintManager.addConstraint(new ServiceCostDeliveryAsociatePickupConstraint());
 
         
 
         VehicleRoutingAlgorithm algorithm = Jsprit.Builder.newInstance(problem).setStateAndConstraintManager(stateManager,constraintManager).setProperty(Jsprit.Strategy.WORST_REGRET, "0.")
                 .setProperty(Jsprit.Strategy.WORST_BEST, "0.").buildAlgorithm();
-        
-        algorithm.addListener(new RuinListener() {
+       // algorithm.setPrematureAlgorithmTermination(new IterationWithoutImprovementTermination(100));
+
+
+        algorithm.addListener(new InsertionStartsListener() {
 			
-		  
+			 
             @Override
-            public void ruinStarts(Collection<VehicleRoute> routes) {
-
-            }
-
-            @Override
-            public void ruinEnds(Collection<VehicleRoute> routes, Collection<Job> unassignedJobs) {
-                Map<TourActivity, VehicleRoute> toDeleteActRouteMap = new HashMap<>();
+            public void informInsertionStarts(Collection<VehicleRoute> routes, Collection<Job> unassignedJobs) {
+            	Map<TourActivity, VehicleRoute> toDeleteActRouteMap = new HashMap<>();
                 for(VehicleRoute route : routes){
                     List<String> orderIds = new ArrayList<String>();
 
@@ -324,9 +328,9 @@ public class EnRoute {
                             
                             if(act instanceof DeliverService){
                             	Delivery sgg = (Delivery) ((DeliverService)act).getJob();
-                            	System.out.println(sgg.getId()+":::"+orderIds);
+                            	//System.out.println(sgg.getId()+":::"+orderIds);
                             	if(!orderIds.contains(sgg.getId().split("::")[0])) {
-                            		System.out.println("me agregue");
+                            		//System.out.println("me agregue");
                             		toDeleteActRouteMap.put(act, route);
                             	}    
                             		
@@ -345,21 +349,16 @@ public class EnRoute {
                         Job job = ((TourActivity.JobActivity) act).getJob();
                         boolean removed = route.getTourActivities().removeJob(job);
                         if(removed) {
-                        	System.out.println("eliminado..."+job.getId());
+                        	//System.out.println("eliminado..."+job.getId());
                             unassignedJobs.add(job);
                         }
                     }
                 }
             }
-
-            @Override
-            public void removed(Job job, VehicleRoute vehicleRoute) {
-
-            }
         });
+         
         
-        
-        algorithm.setMaxIterations(20);
+        //algorithm.setMaxIterations(20);
 		 
         /*
          * and search a solution
@@ -415,10 +414,10 @@ public class EnRoute {
 		 * print nRoutes and totalCosts of bestSolution
 		 */
         for (VehicleRoutingProblemSolution s : solutions) {
-        	System.out.println("==============");
-        	SolutionPrinter.print(problem, s, SolutionPrinter.Print.VERBOSE);
+        	//System.out.println("==============");
+        	//SolutionPrinter.print(problem, s, SolutionPrinter.Print.VERBOSE);
         }
-        //SolutionPrinter.print(problem, Solutions.bestOf(solutions), SolutionPrinter.Print.VERBOSE);
+        SolutionPrinter.print(problem, Solutions.bestOf(solutions), SolutionPrinter.Print.VERBOSE);
        // new GraphStreamViewer(problem, Solutions.bestOf(solutions)).setRenderDelay(100).display();
     }
 

@@ -46,12 +46,14 @@ public class ServiceDeliveryAsociatePickupConstraint implements HardRouteConstra
     		 //System.out.println(s.getId()+" size "+ iFacts.getRoute().getActivities() .size());
              String orderIdOriginal = s.getId().split("::")[0];
              StateId sx = this.states.get(Integer.parseInt(orderIdOriginal));
+            
+            /*
              VehicleRoute route = stateManager.getProblemState(sx, VehicleRoute.class);
              if(route!=null && route != iFacts.getRoute())  return false;
              else if(route==null) return false;
             // System.out.println("size "+ iFacts.getAssociatedActivities().size()); 
              if( iFacts.getRoute().getActivities().isEmpty()) return false;
-             
+             */
              
              
              List<String> orderIds = new ArrayList<String>();
@@ -60,6 +62,10 @@ public class ServiceDeliveryAsociatePickupConstraint implements HardRouteConstra
                      
                      Pickup spick = (Pickup) ((PickupService)ac).getJob();
                      orderIds.add(spick.getId());
+                     if(spick.getId().equalsIgnoreCase(orderIdOriginal)){
+                         
+                       // if(job.getIndex()<= ac.getIndex()+1) return false;
+                     }
                     // System.out.println(orderIds);
                  }else if(ac instanceof DeliverService){
                      
